@@ -1,12 +1,73 @@
+import { useState } from 'react';
+import { useLazyQuery } from '@apollo/client';
+import { FilterForm } from './components/FilterForm';
+import { FILTER_CUSTOMERS } from './graphql/operations';
+import { Customer, FilterCriteria } from './types';
+
+function buildVariables(criteria: FilterCriteria) {
+  const input: Record<string, number> = {};
+  if (criteria.minAmountSpent !== null) input.minAmountSpent = criteria.minAmountSpent;
+  if (criteria.minNumberOfOrders !== null) input.minNumberOfOrders = criteria.minNumberOfOrders;
+  if (criteria.lastOrderWithinDays !== null) input.lastOrderWithinDays = criteria.lastOrderWithinDays;
+  return { criteria: input };
+}
+
 function App() {
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const [runFilter, { loading, error, data }] = useLazyQuery<{ filterCustomers: Customer[] }>(
+    FILTER_CUSTOMERS,
+    { fetchPolicy: 'network-only' }
+  );
+
+  function handleFilter(criteria: FilterCriteria) {
+    setHasSearched(true);
+    runFilter({ variables: buildVariables(criteria) });
+  }
+
+  const customers = data?.filterCustomers ?? [];
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>Customer Tagging Tool</h1>
-        <p>Filter customers and apply bulk tags</p>
+        <p>Filter customers by spend, orders, or recency — then apply bulk tags</p>
       </header>
+
       <main className="app-body">
-        <p>Loading features…</p>
+        <FilterForm onFilter={handleFilter} isLoading={loading} />
+
+        {loading && (
+          <div className="card">
+            <div className="state-box">
+              <div className="spinner" />
+              <p>Loading customers…</p>
+            </div>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="card">
+            <div className="state-box error">
+              <p>Failed to load customers: {error.message}</p>
+              <p style={{ marginTop: 8, fontSize: 12 }}>
+                Make sure the API server is running at{' '}
+                {import.meta.env.VITE_GRAPHQL_URL ?? 'http://localhost:4000/graphql'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && hasSearched && customers.length === 0 && (
+          <div className="card">
+            <div className="state-box">
+              <p>No customers match the current filters.</p>
+              <p style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
+                Try relaxing the criteria above.
+              </p>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
