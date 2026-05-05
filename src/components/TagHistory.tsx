@@ -12,17 +12,26 @@ function formatDateTime(iso: string): string {
   );
 }
 
-export function TagHistory({ refetchSignal }: { refetchSignal: number }) {
-  const { loading, error, data } = useQuery<QueryResult>(GET_TAG_HISTORY, {
+function formatCriteria(criteriaJson: string): string {
+  try {
+    const c = JSON.parse(criteriaJson) as Record<string, number>;
+    const parts: string[] = [];
+    if (c.minAmountSpent != null) parts.push(`spent > $${c.minAmountSpent}`);
+    if (c.minNumberOfOrders != null) parts.push(`orders > ${c.minNumberOfOrders}`);
+    if (c.lastOrderWithinDays != null) parts.push(`ordered in last ${c.lastOrderWithinDays}d`);
+    return parts.length > 0 ? parts.join(' · ') : 'all customers';
+  } catch {
+    return 'unknown filter';
+  }
+}
+
+export function TagHistory() {
+  const { data } = useQuery<QueryResult>(GET_TAG_HISTORY, {
     fetchPolicy: 'cache-and-network',
-    // Re-runs whenever refetchSignal changes (incremented after each apply)
-    variables: { _signal: refetchSignal },
   });
 
   const history = data?.getTagHistory ?? [];
 
-  if (loading && history.length === 0) return null;
-  if (error) return null;
   if (history.length === 0) return null;
 
   return (
@@ -39,6 +48,9 @@ export function TagHistory({ refetchSignal }: { refetchSignal: number }) {
             <span>
               <strong>"{entry.tag}"</strong> — {entry.customerCount} customer
               {entry.customerCount !== 1 ? 's' : ''}
+            </span>
+            <span style={{ fontSize: 12, color: '#777' }}>
+              filter: {formatCriteria(entry.criteria)}
             </span>
             <span className="history-meta">{formatDateTime(entry.timestamp)}</span>
           </div>

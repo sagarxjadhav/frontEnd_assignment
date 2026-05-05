@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@apollo/client';
-import { APPLY_CUSTOMER_TAG } from '../graphql/operations';
+import { APPLY_CUSTOMER_TAG, GET_TAG_HISTORY } from '../graphql/operations';
 import { FilterCriteria, TagAction, TagOperationResult } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -57,6 +57,9 @@ export function TagPanel({ filterCriteria, customerCount, onTagsApplied }: Props
       variables: {
         input: { criteria: buildCriteriaInput(filterCriteria), tag: tag.trim(), action, dryRun: false },
       },
+      // Only refetch history on the real apply, not on dry-run previews
+      refetchQueries: [{ query: GET_TAG_HISTORY }],
+      awaitRefetchQueries: true,
     });
     if (data) {
       const r = data.applyCustomerTag;

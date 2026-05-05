@@ -24,7 +24,6 @@ function buildVariables(criteria: FilterCriteria) {
 function App() {
   const [hasSearched, setHasSearched] = useState(false);
   const [activeCriteria, setActiveCriteria] = useState<FilterCriteria>(DEFAULT_CRITERIA);
-  const [historySignal, setHistorySignal] = useState(0);
 
   const [runFilter, { loading, error, data }] = useLazyQuery<{ filterCustomers: Customer[] }>(
     FILTER_CUSTOMERS,
@@ -40,8 +39,7 @@ function App() {
   function handleTagsApplied() {
     // Refetch customers so tag badges update in the table
     runFilter({ variables: buildVariables(activeCriteria) });
-    // Bump signal so TagHistory re-queries
-    setHistorySignal((n) => n + 1);
+    // TagHistory refetches automatically via refetchQueries in TagPanel
   }
 
   const customers = data?.filterCustomers ?? [];
@@ -105,7 +103,7 @@ function App() {
           </>
         )}
 
-        <TagHistory refetchSignal={historySignal} />
+        <TagHistory />
       </main>
     </div>
   );
