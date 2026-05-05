@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLazyQuery } from '@apollo/client';
 import { FilterForm } from './components/FilterForm';
+import { CustomerTable } from './components/CustomerTable';
 import { FILTER_CUSTOMERS } from './graphql/operations';
 import { Customer, FilterCriteria } from './types';
 
@@ -66,6 +67,15 @@ function App() {
                 Try relaxing the criteria above.
               </p>
             </div>
+          </div>
+        )}
+
+        {!loading && !error && customers.length > 0 && (
+          <div className="card">
+            <p className="result-count">
+              {customers.length} customer{customers.length !== 1 ? 's' : ''} matched
+            </p>
+            <CustomerTable customers={customers} />
           </div>
         )}
       </main>
