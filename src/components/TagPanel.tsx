@@ -20,6 +20,7 @@ function buildCriteriaInput(criteria: FilterCriteria): Record<string, number> {
 
 export function TagPanel({ filterCriteria, customerCount, onTagsApplied }: Props) {
   const [tag, setTag] = useState('');
+  const [tagError, setTagError] = useState('');
   const [action, setAction] = useState<TagAction>('ADD');
   const [preview, setPreview] = useState<TagOperationResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -29,7 +30,17 @@ export function TagPanel({ filterCriteria, customerCount, onTagsApplied }: Props
     APPLY_CUSTOMER_TAG
   );
 
+  function validate(): boolean {
+    if (tag.trim() === '') {
+      setTagError('Tag cannot be empty');
+      return false;
+    }
+    setTagError('');
+    return true;
+  }
+
   async function handlePreview() {
+    if (!validate()) return;
     setPreview(null);
     setSuccessMessage(null);
     const { data } = await runMutation({
@@ -91,10 +102,12 @@ export function TagPanel({ filterCriteria, customerCount, onTagsApplied }: Props
             value={tag}
             onChange={(e) => {
               setTag(e.target.value);
+              if (tagError) setTagError('');
               setPreview(null);
               setSuccessMessage(null);
             }}
           />
+          {tagError && <span className="field-error">{tagError}</span>}
         </div>
 
         <div className="form-field">
