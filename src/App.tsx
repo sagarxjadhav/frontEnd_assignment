@@ -2,8 +2,16 @@ import { useState } from 'react';
 import { useLazyQuery } from '@apollo/client';
 import { FilterForm } from './components/FilterForm';
 import { CustomerTable } from './components/CustomerTable';
+import { TagPanel } from './components/TagPanel';
+import { TagHistory } from './components/TagHistory';
 import { FILTER_CUSTOMERS } from './graphql/operations';
 import { Customer, FilterCriteria } from './types';
+
+const DEFAULT_CRITERIA: FilterCriteria = {
+  minAmountSpent: null,
+  minNumberOfOrders: null,
+  lastOrderWithinDays: null,
+};
 
 function buildVariables(criteria: FilterCriteria) {
   const input: Record<string, number> = {};
@@ -15,6 +23,8 @@ function buildVariables(criteria: FilterCriteria) {
 
 function App() {
   const [hasSearched, setHasSearched] = useState(false);
+  const [activeCriteria, setActiveCriteria] = useState<FilterCriteria>(DEFAULT_CRITERIA);
+  const [historySignal, setHistorySignal] = useState(0);
 
   const [runFilter, { loading, error, data }] = useLazyQuery<{ filterCustomers: Customer[] }>(
     FILTER_CUSTOMERS,
@@ -23,7 +33,15 @@ function App() {
 
   function handleFilter(criteria: FilterCriteria) {
     setHasSearched(true);
+    setActiveCriteria(criteria);
     runFilter({ variables: buildVariables(criteria) });
+  }
+
+  function handleTagsApplied() {
+    // Refetch customers so tag badges update in the table
+    runFilter({ variables: buildVariables(activeCriteria) });
+    // Bump signal so TagHistory re-queries
+    setHistorySignal((n) => n + 1);
   }
 
   const customers = data?.filterCustomers ?? [];
@@ -71,13 +89,23 @@ function App() {
         )}
 
         {!loading && !error && customers.length > 0 && (
-          <div className="card">
-            <p className="result-count">
-              {customers.length} customer{customers.length !== 1 ? 's' : ''} matched
-            </p>
-            <CustomerTable customers={customers} />
-          </div>
+          <>
+            <div className="card">
+              <p className="result-count">
+                {customers.length} customer{customers.length !== 1 ? 's' : ''} matched
+              </p>
+              <CustomerTable customers={customers} />
+            </div>
+
+            <TagPanel
+              filterCriteria={activeCriteria}
+              customerCount={customers.length}
+              onTagsApplied={handleTagsApplied}
+            />
+          </>
         )}
+
+        <TagHistory refetchSignal={historySignal} />
       </main>
     </div>
   );
